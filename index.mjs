@@ -1,9 +1,16 @@
 import Waifuvault from "waifuvault-node-api";
 
+// Tests
+const tests = [
+    {filename:undefined,hideName:false,password:undefined,expires:undefined,url:'https://twistedsisterscleaning.walker.moe/assets/sunflowers.png'},
+    {filename:'./MargeryDaw.png',hideName:false,password:undefined,expires:undefined,url:undefined},
+    {filename:'./RoryMercury.png',hideName:true,password:"dangerWaifu",expires:"1d",url:undefined},
+];
+
 // Main Program
-const responses = await uploadTest();
+const responses = await uploadTest(tests);
 await infoTest(responses);
-await downloadTest(responses);
+await downloadTest(responses,tests);
 await deleteTest(responses);
 
 // Sleep function
@@ -14,30 +21,22 @@ function sleep(ms) {
 }
 
 // Uploads
-async function uploadTest() {
+async function uploadTest(tests) {
+    const responses = [];
     console.log("UPLOAD FILES TEST");
-    const respURL = await Waifuvault.uploadFile({
-        url: "https://twistedsisterscleaning.walker.moe/assets/sunflowers.png"
-    });
-    console.log("URL Upload", respURL.url);
-    await sleep(1000);
-
-    const respFile = await Waifuvault.uploadFile({
-        file: "./MargeryDaw.png"
-    });
-    console.log("File Upload",respFile.url);
-    await sleep(1000);
-
-    const respMonty = await Waifuvault.uploadFile({
-        file: "./RoryMercury.png",
-        expires: "1d",
-        hideFilename: true,
-        password: "dangerWaifu"
-    });
-    console.log("Encrypted Hidden File Upload",respMonty.url);
-    await sleep(1000);
-
-    return [respURL,respFile,respMonty];
+    for(const test of tests) {
+        const resp = await Waifuvault.uploadFile({
+            ...(test.filename) && {file: test.filename},
+            ...(test.url) && {url: test.url},
+            ...(test.expires) && {expires: test.expires},
+            ...(test.hideName) && {hideFilename: test.hideName},
+            ...(test.password) && {password: test.password}
+        });
+        console.log("File Upload",resp.url,resp.token);
+        responses.push(resp);
+        await sleep(1000);
+    }
+    return responses;
 }
 
 // Infos
@@ -61,27 +60,14 @@ async function deleteTest(responses) {
 }
 
 // Downloads
-async function downloadTest(responses) {
+async function downloadTest(responses,tests) {
     console.log("\nDOWNLOAD TEST");
-    const fileURL = await Waifuvault.getFile({
-        token: responses[0].token
-    });
-    console.log("URL File Buffer");
-    console.log(fileURL);
-    await sleep(1000);
-
-    const file = await Waifuvault.getFile({
-        token: responses[1].token
-    });
-    console.log("File Buffer");
-    console.log(file);
-    await sleep(1000);
-
-    const fileMonty = await Waifuvault.getFile({
-        token: responses[2].token,
-        password: "dangerWaifu"
-    });
-    console.log("Hidden Encrypted Buffer");
-    console.log(fileMonty);
-    await sleep(1000);
+    for(let i=0; i<responses.length; i++) {
+        const fileURL = await Waifuvault.getFile({
+            token: responses[i].token,
+            ...(tests[i].password) && {password: tests[i].password}
+        });
+        console.log("File Buffer",fileURL.length,tests[i].filename ?? tests[i].url);
+        await sleep(1000);
+    }
 }
